@@ -1,6 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose"
-import {Tweet} from "../models/tweet.model.js"
-import {User} from "../models/user.model.js"
+import {Tweet} from "../models/tweet.models.js"
+import {User} from "../models/user.models.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
@@ -115,6 +115,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
     if(!fetchTweet){
         throw new ApiError(400, "No Tweet found")
+    }
+
+    if (fetchTweet.owner.toString() !== userId.toString()) {
+        throw new ApiError(403, "You don't have permission to delete this tweet!");
     }
 
     const deletedTweet = await Tweet.findByIdAndDelete(tweetId)
