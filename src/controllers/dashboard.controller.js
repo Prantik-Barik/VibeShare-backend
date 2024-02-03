@@ -13,98 +13,53 @@ const getChannelStats = asyncHandler(async (req, res) => {
     if(!isValidObjectId(ownerId)){
         throw new ApiError(400, "Invalid OwnerId")
     }
-
-    // Get total likes 
-    const totalLikes = await Like.aggregate([
-        {
-            $match : {
-                likedBy : new mongoose.Types.ObjectId(ownerId)
-            }
-        },
-        {
-            $group : {
-                _id : null,
-                totalVideoLikes : {
-                    $sum : {
-                       $cond: [
-                        { $ifNull : ["$video", false]},
-                        1,
-                        0
-                       ] 
-                    }
-                },
-                totalTweetLikes : {
-                    $sum : {
-                        $cond: [
-                         { $ifNull : ["$tweet", false]},
-                         1,
-                         0
-                        ] 
-                     }
-                },
-                totalCommentLikes :{
-                    $sum : {
-                        $cond: [
-                         { $ifNull : ["$commet", false]},
-                         1,
-                         0
-                        ] 
-                     }
-                }
-            }
-        }
-    ])
-
-    // Get total video views
-    const totalViews = await Video.aggregate([
+    
+    const channelStats = await Video.aggregate([
         {
             $match : {
                 owner : new mongoose.Types.ObjectId(ownerId)
             }
         },
         {
+            $lookup : {
+                from : "likes",
+                localField : "_id",
+                foreignField : "video",
+                as : "Likes"
+            }
+        },
+        {
+            $lookup : {
+                from : "subscriptions",
+                localField : "owner",
+                foreignField : "channel",
+                as : "Subscribers"
+            }
+        },
+        {
             $group : {
                 _id : null,
-                totalViews : {
-                    $sum : "$views"
-                }
-            }
-        }
-    ])
-
-    // Get total videos
-    const totalVideos = await Video.aggregate([
-        {
-            $match : {
-                owner : new mongoose.Types.ObjectId(ownerId)
-            }
+                totalVideos : { $count : "videos" },
+                totalViews : { $sum : "$views" },
+                totalSubscribers : { $first :
+                    { $size : "$Subscribers" }},
+                totalLikes : { $first :
+                    { $size : "$Likes" }},
+            },
         },
         {
-            $count : "videos"
-        }
-    ])
-
-    // Get total subscribers
-    const totalSubscribers = await Video.aggregate([
-        {
-            $match : {
-                channel : new mongoose.Types.ObjectId(ownerId)
+            $project : {
+                totalSubscribers:1,
+                totalLikes:1,
+                totalVideos:1,
+                totalViews:1
             }
-        },
-        {
-            $count : "subscribers"
         }
     ])
-
-    const channelStats = {
-        subscribers : totalSubscribers[0].subscribers,
-        videos : totalVideos[0].videos,
-        views : totalViews[0].totalViews,
-    }
 
     return res.status(200).json( new ApiResponse(
         200,
-        channelStats,
+        channelStats[0],
         "ChannelStats fetched successfully"
     ))
 })

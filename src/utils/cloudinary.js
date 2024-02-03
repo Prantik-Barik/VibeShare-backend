@@ -13,6 +13,7 @@ const uploadOnCloudinary = async (localFilePath) =>
         if(!localFilePath)  return null
 
         const response = await cloudinary.uploader.upload(localFilePath,{
+            folder: "Vtube",
             resource_type: "auto"
         })
 
@@ -36,6 +37,7 @@ const deletefromCloudinary = async(publicId) =>{
         })
     } catch (error) {
         console.log("Something went wrong wile deleting on cloudinary")
+        return null
     }    
 }
 
